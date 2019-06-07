@@ -16,12 +16,12 @@ class HelpdeskMailer < ActionMailer::Base
 
   # Sending email notifications to the supportclient
   def email_to_supportclient(issue, params)
-    # issue, recipient, journal=nil, text='', copy_to=nil    
+    # issue, recipient, journal=nil, text='', copy_to=nil
 
     recipient = params[:recipient]
     journal = params[:journal]
     text = params[:text]
-    carbon_copy = params[:carbon_copy]    
+    carbon_copy = params[:carbon_copy]
 
     redmine_headers 'Project' => issue.project.identifier,
                     'Issue-Id' => issue.id,
@@ -61,10 +61,10 @@ class HelpdeskMailer < ActionMailer::Base
       end
     end
     if @message_id_object
-      headers[:message_id] = "<#{self.class.message_id_for(@message_id_object)}>"
+      headers[:message_id] = "<#{self.class.message_id_for(@message_id_object, @user)}>"
     end
     if @references_objects
-      headers[:references] = @references_objects.collect {|o| "<#{self.class.references_for(o)}>"}.join(' ')
+      headers[:references] = @references_objects.collect {|o| "<#{self.class.references_for(o, @user)}>"}.join(' ')
     end
     # create mail object to deliver
     mail = if text.present? || reply.present?
@@ -102,19 +102,28 @@ class HelpdeskMailer < ActionMailer::Base
 
   private
 
+  def self.token_for(object, user)
+    timestamp = object.send(object.respond_to?(:created_on) ? :created_on : :updated_on)
+    hash = [
+      "redmine",
+      "#{object.class.name.demodulize.underscore}-#{object.id}",
+      timestamp.utc.strftime("%Y%m%d%H%M%S")
+    ]
+    hash << user.id if user
+    host = Setting.mail_from.to_s.strip.gsub(%r{^.*@|>}, '')
+    host = "#{::Socket.gethostname}.redmine" if host.empty?
+    "#{hash.join('.')}@#{host}"
+  end
+
   # Returns a Message-Id for the given object
-  def self.message_id_for(object)
-    Mailer.class_eval do
-      token_for(object, true)
-    end
+  def self.message_id_for(object, user)
+      token_for(object, user)
   end
 
   # Returns a uniq token for a given object referenced by all notifications
   # related to this object
-  def self.references_for(object)
-    Mailer.class_eval do
-      token_for(object, false)
-    end
+  def self.references_for(object, user)
+    token_for(object, user)
   end
 
   # Appends a Redmine header field (name is prepended with 'X-Redmine-')
