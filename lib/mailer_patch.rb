@@ -2,7 +2,7 @@ module RedmineHelpdesk
   module MailerPatch
     def self.included(base) # :nodoc:
       base.send(:include, InstanceMethods)
-      
+
       base.class_eval do
         alias_method :issue_edit_without_helpdesk, :issue_edit
         alias_method :issue_edit, :issue_edit_with_helpdesk
@@ -14,7 +14,7 @@ module RedmineHelpdesk
       # be called on existing tickets. We will add the
       # owner-email to the recipients only if no email-
       # footer text is available.
-      def issue_edit_with_helpdesk(journal, to_users=[], cc_users=[])
+      def issue_edit_with_helpdesk(user, journal, to_users=[], cc_users=[])
         issue = journal.journalized
         redmine_headers 'Project' => issue.project.identifier,
                         'Issue-Id' => issue.id,
@@ -23,7 +23,7 @@ module RedmineHelpdesk
         message_id journal
         references issue
         @author = journal.user
-        
+
         other_recipients = []
         # add owner-email to the recipients
         begin
@@ -52,7 +52,7 @@ module RedmineHelpdesk
           :subject => s
         )
       end
-      
+
     end # module InstanceMethods
   end # module MailerPatch
 end # module RedmineHelpdesk
